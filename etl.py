@@ -5,6 +5,18 @@ import pandas as pd
 from sql_queries import *
 
 def copy_file_to_database(cur, table_name, df, columns = None):
+    """
+    - It receives:
+        > cur: the connection cursor
+        > table_name: a table name
+        > df: dataframe filled with data to replicate in table
+        > columns: list with the columns names (optional)
+         
+    - It saves the dataframe as a CSV file and this file will be used in copy query
+    - The column variable receive a new value. If there was a list of columns it will become a string with all columns separeted by commas, otherwise it will become a empty string
+    - It executes the copy calling a sql specified in sql_queries.py and passing the file created above
+    - This function doesn't return anything
+    """
     df.to_csv('/df.csv', index=None)
     file = open('/df.csv')
     columns = '({})'.format(','.join(columns)) if columns is not None else ''
@@ -12,6 +24,16 @@ def copy_file_to_database(cur, table_name, df, columns = None):
 
 
 def process_song_file(cur, filepath):
+    """
+    - It receives:
+        > cur: the connection cursor
+        > filepath: the path where is the file
+         
+    - It opens the file specified by filepath
+    - It chooses the columns which there is informations about songs and transform this into a list of values. This is used to insert a new row in songs table using a script specified in sql_queries.py
+    - It chooses the columns which there is informations about artists and transform this into a list of values. This is used to insert a new row in artists table using a script specified in sql_queries.py
+    - This function doesn't return anything
+    """
     # open song file
     df = pd.read_json(filepath, lines=True)
 
@@ -25,6 +47,19 @@ def process_song_file(cur, filepath):
     
 
 def process_log_file(cur, filepath):
+    """
+    - It receives:
+        > cur: the connection cursor
+        > filepath: the path where is the file
+         
+    - It opens the file specified by filepath and filter the dataframe by the columns which the page columns has the value 'NextSong'
+    - It transforms the value in ts column from a timestamp value to a datetime value
+    - The new ts columns is used to create a new dataframe with aditional informations about the time. This is used to insert a new row in time table using a script specified in sql_queries.py
+    - It chooses the columns which there is informations about user and transform this into a list of values. This is used to insert a new row in songs users using a script specified in sql_queries.py
+    - The last step is read the dataframe and for each line search for a song_id and an artist_id using informations in this data. With the values, which can be None, we create a list with the data to create a new insert in songplays and add to a list with all new values. With this list we create a new dataframe and call the copy_file_to_database function to fill the songplays tables.
+    - This function doesn't return anything
+    """
+    
     # open log file
     df = pd.read_json(filepath, lines=True)
 
@@ -73,6 +108,18 @@ def process_log_file(cur, filepath):
 
 
 def process_data(cur, conn, filepath, func):
+    """
+    - It receives:
+        > cur: the connection cursor
+        > conn: the connection
+        > filepath: the path 
+        > func: the function used to process the file
+         
+    - Create a list with all files in this filepath and its subdirectories
+    - Each file it will be processed using the function specified, after this we commit the changes in database
+    - This function doesn't return anything
+    """
+    
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
@@ -92,6 +139,13 @@ def process_data(cur, conn, filepath, func):
 
 
 def main():
+    """
+    - It opens the connection and create a cursor.
+    - Process the files in data/song_data directory using the process_song_file
+    - Process the files in data/log_data directory using the process_log_file
+    - Close the connection
+    - This function doesn't return anything
+    """
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
 
